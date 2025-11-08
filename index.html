@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta Dinámica</title>
+    <title>Ruleta Dinámica Dawin</title>
     <style>
         * {
             margin: 0;
@@ -18,6 +18,29 @@
             padding: 20px;
         }
 
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+
+.subtitle {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -27,7 +50,7 @@
             text-align: center;
             color: white;
             font-size: 2.5rem;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
@@ -96,7 +119,7 @@
         }
 
         .input-group {
-            display: flex;
+          
             gap: 10px;
             margin-bottom: 15px;
         }
@@ -151,19 +174,26 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.3);
         }
 
-        .arrow {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-top: 40px solid #f45c43;
-            filter: drop-shadow(0 3px 5px rgba(0,0,0,0.3));
-            z-index: 10;
-        }
+      
+
+.arrow {
+        border-bottom: blue;
+    /* object-fit: initial; */
+    transform: rotate(4deg);
+    position: absolute;
+    top: 177px;
+    left: 68%;
+    transform: translateX(400%) rotate(90deg);
+    width: 0;
+    height: 0;
+    border-left: 15px solid #e90b0b00;
+    border-right: 15px solid #e7171700;
+    border-top: 40px solid #f45c43;
+    border-bottom: px solid #e90b0b00;
+    filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.3));
+    z-index: 10;
+}
+
 
         .participants-section {
             background: white;
@@ -350,7 +380,12 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎡 Ruleta Dinámica de Nombres</h1>
+
+       <header>
+            <h1>🎡 Juega la Ruleta Dinámica D&R</h1>
+            <p class="subtitle">Gira la ruleta y descubre al ganador - Comparte el código QR para participación remota</p>
+        </header>
+
 
         <div class="game-controls">
             <div class="game-info">
@@ -561,10 +596,12 @@
             document.getElementById('spinBtn').disabled = participants.length < 2 || isSpinning;
             
             if (participants.length === 0) {
-                list.innerHTML = '<div class="empty-state">No hay participantes aún</div>';
+                list.innerHTML = '<div class="empty-state">No hay participantes aún,agrega algunos nombres para empezar tu sorteo</div>';
                 return;
             }
             
+  
+
             list.innerHTML = participants.map((p, index) => `
                 <div class="participant-item">
                     <span class="participant-name">${p.name} ${p.number ? `(${p.number})` : ''}</span>
