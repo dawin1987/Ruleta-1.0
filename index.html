@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -446,6 +445,11 @@ header {
         </div>
     </div>
 
+<div>
+  
+  <div id="messageBox" style="margin-top:8px; font-size:0.9rem;"></div>
+</div>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
@@ -553,43 +557,62 @@ header {
             });
         }
 
-        async function addParticipant()
-          {
-            
-        const name = document.getElementById('nameInput').value.trim();
-            const number = document.getElementById('numberInput').value.trim();
-            
-               if (!name) {
-                  alert('Por favor ingresa un nombre');
-                  return;
-                          }
-
-                if (!currentGameId) {
-                alert('Primero crea un nuevo juego');
-                return;
-                                     }
-
-                   const gameRef = doc(db, 'games', currentGameId);
-                   const gameSnapshot = await getDoc(gameRef);
-            
-              if (gameSnapshot.exists() && gameSnapshot.data().status === 'closed') {
-                alert('Este juego está cerrado');
-                return;
-                                                                                  }
-
-                const participantsRef = collection(db, 'games', currentGameId, 'participants');
-               await addDoc(participantsRef, {
-                name: name,
-                number: number,
-                addedAt: Date.now()
-                                           });
-
-             document.getElementById('nameInput').value = '';
-             document.getElementById('numberInput').value = '';
 
 
+async function addParticipant() {
+  const name = document.getElementById('nameInput').value.trim();
+  const number = document.getElementById('numberInput').value.trim();
 
-        }
+  if (!name) {
+    alert('Por favor ingresa un nombre');
+    return;
+  }
+
+  if (!currentGameId) {
+    alert('Primero crea un nuevo juego');
+    return;
+  }
+
+  const gameRef = doc(db, 'games', currentGameId);
+  const gameSnapshot = await getDoc(gameRef);
+
+  if (gameSnapshot.exists() && gameSnapshot.data().status === 'closed') {
+    alert('Este juego está cerrado');
+    return;
+  }
+
+  // 🔍 Verificar duplicado antes de agregar
+  const participantsRef = collection(db, 'games', currentGameId, 'participants');
+  const querySnapshot = await getDocs(participantsRef);
+  const exists = querySnapshot.docs.some(doc => {
+    const data = doc.data();
+    return (
+      data.name.toLowerCase() === name.toLowerCase() &&
+      data.number.trim() === number.trim()
+    );
+  });
+
+  if (exists) {
+    alert('⚠️ Este nombre y número ya han sido registrados.');
+    return;
+  }
+
+  await addDoc(participantsRef, {
+    name: name,
+    number: number,
+    addedAt: Date.now(),
+  });
+
+  document.getElementById('nameInput').value = '';
+  document.getElementById('numberInput').value = '';
+}
+
+       
+
+
+
+
+
 
         async function removeParticipant(id) {
             if (confirm('¿Eliminar este participante?')) {
@@ -626,6 +649,11 @@ header {
                 return;
             }
             
+  // 🔹 Ordenar por hora ganada (ascendente: del primero al último)
+    winners.sort((a, b) => (a.wonAt || 0) - (b.wonAt || 0));
+
+    // 🔹 Mostrar los ganadores ordenados
+
             list.innerHTML = winners.map(w => `
                 <div class="winner-item">
                     <span>🏆 ${w.name} ${w.number ? `(${w.number})` : ''}</span>
@@ -844,6 +872,7 @@ header {
                 const name = document.getElementById('joinName').value.trim();
                 const number = document.getElementById('joinNumber').value.trim();
                 const message = document.getElementById('joinMessage');
+             message.textContent = '';
 
 
                 if (!name) {
@@ -865,6 +894,26 @@ header {
                     return;
                                                               }
                 const participantsRef = collection(db, 'games', joinGameId, 'participants');
+                
+
+// Verificar si ya existe el participante con mismo nombre y número 
+const existingSnapshot = await getDocs(participantsRef);
+const alreadyExists = existingSnapshot.docs.some(doc => {
+  const data = doc.data();
+  return (
+    data.name.toLowerCase() === name.toLowerCase() &&
+    data.number.trim() === number.trim()
+  );
+});
+
+if (alreadyExists) {
+  message.style.color = 'red';
+  message.textContent = '⚠️ Este nombre y número ya están registrados.';
+  return;
+}
+
+
+
                 await addDoc(participantsRef, {
                     name: name,
                     number: number,
@@ -884,10 +933,12 @@ header {
 */
 
 // Referencias a Firestore para el juego que se abrió por enlace
+
 const joinParticipantsRef = collection(db, 'games', joinGameId, 'participants');
 const joinWinnersRef = collection(db, 'games', joinGameId, 'winners');
 
 // Escuchar participantes en tiempo real y actualizar la vista del join
+
 onSnapshot(joinParticipantsRef, (snapshot) => {
     const listDiv = document.getElementById('joinParticipantsList');
     const countSpan = document.getElementById('joinParticipantCount');
@@ -904,6 +955,7 @@ onSnapshot(joinParticipantsRef, (snapshot) => {
     });
 
     // ordenar opcional: por fecha de añadido (asc)
+
     items.sort((a,b) => (a.addedAt || 0) - (b.addedAt || 0));
 
     countSpan.textContent = items.length;
@@ -920,6 +972,7 @@ onSnapshot(joinParticipantsRef, (snapshot) => {
 });
 
 // Escuchar ganadores en tiempo real y actualizar la vista del join
+
 onSnapshot(joinWinnersRef, (snapshot) => {
     const listDiv = document.getElementById('joinWinnersList');
     const countSpan = document.getElementById('joinWinnerCount');
@@ -936,7 +989,7 @@ onSnapshot(joinWinnersRef, (snapshot) => {
     });
 
     // ordenar por fecha ganado (descendente)
-    items.sort((a,b) => (b.wonAt || 0) - (a.wonAt || 0));
+    items.sort((a, b) => (a.wonAt || 0) - (b.wonAt || 0));
 
     countSpan.textContent = items.length;
 
