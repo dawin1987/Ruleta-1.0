@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ruleta Dinámica Dawin</title>
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
             margin: 0;
@@ -150,6 +151,10 @@ header {
                 grid-template-columns: 1fr;
             }
         }
+
+
+
+
 
         .wheel-section {
             background: white;
@@ -376,6 +381,16 @@ header {
             color: #999;
             font-style: italic;
         }
+
+@media (max-width: 430px) {
+    .wheel-container {
+        width: 300px;
+        height: 300px;
+        margin: 20px auto;
+       
+    }
+}
+
     </style>
 </head>
 <body>
@@ -477,6 +492,31 @@ header {
         let gameStatus = 'open';
         let currentWinner = null;
 
+
+// ✅ Restaurar juego anterior si existe en localStorage
+const savedGameId = localStorage.getItem('currentGameId');
+if (savedGameId) {
+    currentGameId = savedGameId;
+    console.log("♻️ Juego restaurado automáticamente:", currentGameId);
+
+    // Reactivar listeners
+    listenToParticipants();
+    listenToWinners();
+
+    // Actualizar interfaz
+    document.getElementById('gameIdDisplay').textContent = currentGameId;
+    document.getElementById('gameStatus').textContent = 'ABIERTO';
+    document.getElementById('gameStatus').className = 'status-badge status-open';
+
+    const closeBtn = document.getElementById('closeGameBtn');
+    if (closeBtn) closeBtn.disabled = false;
+
+    // Mostrar QR y enlace
+    generateQR();
+}
+
+
+
         const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'];
 
         const canvas = document.getElementById('wheelCanvas');
@@ -488,6 +528,7 @@ header {
 
         async function initNewGame() {
             currentGameId = generateGameId();
+localStorage.setItem('currentGameId', currentGameId);
             participants = [];
             winners = [];
             gameStatus = 'open';
@@ -702,7 +743,7 @@ async function addParticipant() {
                 ctx.translate(centerX, centerY);
                 ctx.rotate(startAngle + anglePerSegment / 2);
                 ctx.textAlign = 'center';
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = '#000';
                 ctx.font = 'bold 14px Arial';
                 ctx.fillText(p.name, radius / 1.5, 5);
                 ctx.restore();
@@ -804,6 +845,7 @@ async function addParticipant() {
                 document.getElementById('gameStatus').textContent = 'CERRADO';
                 document.getElementById('gameStatus').className = 'status-badge status-closed';
                 document.getElementById('closeGameBtn').disabled = true;
+localStorage.removeItem('currentGameId'); // ✅ Limpia el ID guardado
                 alert('Juego cerrado. Ya no se aceptan más participantes.');
             }
         }
