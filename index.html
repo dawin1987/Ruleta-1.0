@@ -385,7 +385,7 @@ header {
         .empty-state {
             text-align: center;
             padding: 40px;
-            color: #999;
+            color: #ffffff;
             font-style: italic;
         }
 
@@ -424,6 +424,35 @@ header {
     font-size: 1.1rem;
     opacity: 0.8;
              }
+
+    .nombreparticipante
+          {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border 0.3s;
+    max-width: 100%;
+    width: 320px;
+          }
+    .numero {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border 0.3s;
+    max-width: 100%;
+    width: 320px;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: #f7f7f7;
+    max-width: 100%;
+    width: 320px;
+}
     
 }
 
@@ -452,8 +481,8 @@ header {
             </div>
 
             <div class="input-group">
-                <input type="text" id="nameInput" placeholder="Nombre del participante" />
-                <input type="text" id="numberInput" placeholder="Número" />
+                <input type="text" class="nombreparticipante" id="nameInput" placeholder="Nombre del participante" />
+                <input type="text" class="numero" id="numberInput" placeholder="Número" />
                 <button class="btn btn-success" id="addParticipantBtn">➕ Agregar</button>
             </div>
         </div>
@@ -606,20 +635,30 @@ localStorage.setItem('currentGameId', currentGameId);
             document.getElementById('qrLink').innerHTML = `<strong>Enlace:</strong> <a href="${url}" target="_blank">${url}</a>`;
         }
 
-        function listenToParticipants() {
-            const participantsRef = collection(db, 'games', currentGameId, 'participants');
-            onSnapshot(participantsRef, (snapshot) => {
-                participants = [];
-                snapshot.forEach((doc) => {
-                    participants.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
-                });
-                updateParticipantsList();
-                drawWheel();
+     function listenToParticipants() {
+    const participantsRef = collection(db, 'games', currentGameId, 'participants');
+    onSnapshot(participantsRef, (snapshot) => {
+        participants = [];
+        snapshot.forEach((doc) => {
+            participants.push({
+                id: doc.id,
+                ...doc.data()
             });
+        });
+
+        // 🔥 Marcar en tiempo real el último agregado
+        if (participants.length > 0) {
+            // Ordenamos temporalmente para detectar el último agregado
+            const ordered = [...participants].sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+            localStorage.setItem('lastAddedParticipant', ordered[0].id);
         }
+
+        updateParticipantsList();
+        drawWheel();
+    });
+}
+
+
 
         function listenToWinners() {
             const winnersRef = collection(db, 'games', currentGameId, 'winners');
@@ -675,11 +714,14 @@ async function addParticipant() {
     return;
   }
 
-  await addDoc(participantsRef, {
+ const newDoc = await addDoc(participantsRef, {
     name: name,
     number: number,
     addedAt: Date.now(),
-  });
+});
+
+// 🔴 Guardar el ID del último agregado
+localStorage.setItem('lastAddedParticipant', newDoc.id);
 
   document.getElementById('nameInput').value = '';
   document.getElementById('numberInput').value = '';
@@ -708,15 +750,26 @@ async function addParticipant() {
                 return;
             }
             
-  
+    // 🔥 Ordenar por fecha agregado DESC
+    participants.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
 
-            list.innerHTML = participants.map((p, index) => `
-                <div class="participant-item">
-                    <span class="participant-name">${p.name} ${p.number ? `(${p.number})` : ''}</span>
-                    <button class="btn btn-danger btn-small" onclick="window.removeParticipant('${p.id}')">Eliminar</button>
-                </div>
-            `).join('');
+            const lastId = localStorage.getItem('lastAddedParticipant');
+
+list.innerHTML = participants.map((p) => {
+    const isLast = p.id === lastId;
+    return `
+        <div class="participant-item">
+            <span class="participant-name" style="color:${isLast ? 'red' : 'black'};">
+                ${p.name} ${p.number ? `(${p.number})` : ''}
+            </span>
+            <button class="btn btn-danger btn-small" onclick="window.removeParticipant('${p.id}')">Eliminar</button>
+        </div>
+    `;
+}).join('');
+
         }
+
+
 
         function updateWinnersList() {
             const list = document.getElementById('winnersList');
@@ -1033,9 +1086,8 @@ onSnapshot(joinParticipantsRef, (snapshot) => {
         });
     });
 
-    // ordenar opcional: por fecha de añadido (asc)
-
-    items.sort((a,b) => (a.addedAt || 0) - (b.addedAt || 0));
+    // Ordenar por fecha (el más nuevo primero)
+    items.sort((a,b) => (b.addedAt || 0) - (a.addedAt || 0));
 
     countSpan.textContent = items.length;
 
@@ -1044,11 +1096,24 @@ onSnapshot(joinParticipantsRef, (snapshot) => {
         return;
     }
 
+    let lastAddedId = items[0].id; // ← EL MÁS RECIENTE
+
     listDiv.innerHTML = items.map(p => {
-        const num = p.number ? ` <span style="color:#666; font-size:0.9rem;">(${p.number})</span>` : '';
-        return `<div style="padding:6px 4px; border-bottom:1px solid #f0f0f0;">• ${escapeHtml(p.name)}${num}</div>`;
+        const isLast = p.id === lastAddedId;
+        const color = isLast ? "red" : "black";
+
+        const num = p.number
+            ? ` <span style="color:#666; font-size:0.9rem;">(${p.number})</span>`
+            : '';
+
+        return `
+            <div style="padding:6px 4px; border-bottom:1px solid #f0f0f0; color:${color}">
+                • ${escapeHtml(p.name)}${num}
+            </div>
+        `;
     }).join('');
 });
+
 
 // Escuchar ganadores en tiempo real y actualizar la vista del join
 
@@ -1103,9 +1168,3 @@ function escapeHtml(str) {
 
 </body>
 </html>
-
-
-
-
-
-
