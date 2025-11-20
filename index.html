@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ruleta Dinámica Dawin</title>
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   
  <style>
         * {
@@ -337,6 +339,31 @@ header {
             margin: 20px 0;
             font-weight: bold;
         }
+
+
+
+
+/* Toast Notifications */
+        #toast-container {
+            position: fixed; 
+top: 50%;
+    left: 50%;
+z-index: 9999;
+    display: flex; flex-direction: column; gap: 10px;
+   
+        }
+        .toast {
+            background: #2d3748; color: white;  padding: 20px 30px;
+            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            font-size: 18px; opacity: 0; transform: translate(-50%, -50%);
+            transition: 0.3s;
+        }
+        .toast.show { opacity: 1;transform: translate(-50%, -50%); }
+        .toast-success { background: #48bb78; }
+        .toast-error { background: #f56565; }
+
+
+
 .confetti {
     position: fixed; /* siempre encima del contenido */
     top: 0;
@@ -461,13 +488,21 @@ header {
     </style>
 </head>
 <body>
+
+
+
     <div class="container">
+
+
 
        <header>
             <h1>🎡 Juega la Ruleta Dinámica D&R</h1>
             <p class="subtitle">Gira la ruleta y descubre al ganador - Comparte el código QR para participación remota</p>
         </header>
 
+
+
+ <div id="toast-container"></div>
 
 
 
@@ -573,6 +608,8 @@ header {
         let gameStatus = 'open';
         let currentWinner = null;
 
+ // Contexto de Audio para efectos precisos
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 // ✅ Restaurar juego anterior si existe en localStorage
 const savedGameId = localStorage.getItem('currentGameId');
@@ -603,11 +640,13 @@ if (savedGameId) {
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
 
+
         function generateGameId() {
             return 'GAME_' + Date.now();
         }
 
         async function initNewGame() {
+ if(currentGameId && !confirm("¿Crear nuevo juego? El actual se perderá de la vista.")) return;
             currentGameId = generateGameId();
 localStorage.setItem('currentGameId', currentGameId);
             participants = [];
@@ -628,26 +667,19 @@ localStorage.setItem('currentGameId', currentGameId);
             updateParticipantsList();
             updateWinnersList();
             drawWheel();
+
             
             listenToParticipants();
             listenToWinners();
+showToast('✅ Nuevo juego creado exitosamente');
         }
 
-        function generateQR() {
+      function generateQR() {
             const qrDiv = document.getElementById('qrcode');
             qrDiv.innerHTML = '';
-            
             const url = `${window.location.origin}${window.location.pathname}?join=${currentGameId}`;
-            
-            new QRCode(qrDiv, {
-                text: url,
-                width: 200,
-                height: 200,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-            });
-            
-            document.getElementById('qrLink').innerHTML = `<strong>Enlace:</strong> <a href="${url}" target="_blank">${url}</a>`;
+            new QRCode(qrDiv, { text: url, width: 150, height: 150 });
+            document.getElementById('qrLink').innerHTML = `<a href="${url}" target="_blank">Copiar enlace de invitación</a>`;
         }
 
      function listenToParticipants() {
@@ -696,12 +728,12 @@ async function addParticipant() {
   const number = document.getElementById('numberInput').value.trim();
 
   if (!name) {
-    alert('Por favor ingresa un nombre');
+    showToast("Por favor ingresa un nombre");
     return;
   }
 
   if (!currentGameId) {
-    alert('Primero crea un nuevo juego');
+    showToast("Primero crea un nuevo juego");
     return;
   }
 
@@ -709,7 +741,7 @@ async function addParticipant() {
   const gameSnapshot = await getDoc(gameRef);
 
   if (gameSnapshot.exists() && gameSnapshot.data().status === 'closed') {
-    alert('Este juego está cerrado');
+    showToast("Este juego está cerrado");
     return;
   }
 
@@ -725,7 +757,7 @@ async function addParticipant() {
   });
 
   if (exists) {
-    alert('⚠️ Este nombre y número ya han sido registrados.');
+    showToast('⚠️ Este participante ya existe', 'error');
     return;
   }
 
@@ -743,6 +775,11 @@ localStorage.setItem('lastAddedParticipant', newDoc.id);
 }
 
        
+
+
+
+
+
 
         async function removeParticipant(id) {
             if (confirm('¿Eliminar este participante?')) {
@@ -855,13 +892,21 @@ list.innerHTML = participants.map((p) => {
             ctx.fill();
         }
 
+
+
+
+
+
+
+// --- LÓGICA DE GIRO ---
         function spinWheel() {
 
 // ❗ Verificar si el juego está abierto
     if (gameStatus === "open") {
-        alert("Debes cerrar el juego antes de girar la ruleta.");
+        showToast("⚠️ Cierra el juego antes de girar", 'error');
         return; // ⛔ No permite girar
     }
+
             if (isSpinning || participants.length < 2) return;
             
             isSpinning = true;
@@ -888,6 +933,7 @@ const startTime = Date.now();
 const segmentAngle = 360 / participants.length;
 
             let currentRotation = 0;
+
 
             function animate() {
                 const elapsed = Date.now() - startTime;
@@ -1149,6 +1195,10 @@ onSnapshot(joinParticipantsRef, (snapshot) => {
 });
 
 
+
+
+
+
 // Escuchar ganadores en tiempo real y actualizar la vista del join
 
 onSnapshot(joinWinnersRef, (snapshot) => {
@@ -1196,6 +1246,28 @@ function escapeHtml(str) {
 
 
         }
+
+
+
+
+ function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            
+            // Trigger reflow
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+
     </script>
 
 
